@@ -3,7 +3,7 @@
 # Exit on any error
 set -e
 
-echo "Building BDL Web Demo..."
+echo "Building BBL Web Demo..."
 
 # Check if wasm-pack is installed
 if ! command -v wasm-pack &> /dev/null; then

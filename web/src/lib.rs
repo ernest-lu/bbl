@@ -1,5 +1,5 @@
-use wasm_bindgen::prelude::*;
 use std::cell::RefCell;
+use wasm_bindgen::prelude::*;
 
 thread_local! {
     static STDIN_BUFFER: RefCell<String> = RefCell::new(String::new());
@@ -18,9 +18,9 @@ pub fn compile_and_run(input: &str, stdin: &str) -> String {
         *buffer.borrow_mut() = stdin.to_string();
     });
 
-    // Parse BDL code
-    let ast = match bdl_frontend::parser::parse_program(input) {
-        Ok(ast) => *ast,  // Dereference the Box<AstNode>
+    // Parse BBL code
+    let ast = match bbl_frontend::parser::parse_program(input) {
+        Ok(ast) => *ast, // Dereference the Box<AstNode>
         Err(e) => {
             return format!("Parse error: {}", e);
         }
@@ -28,14 +28,14 @@ pub fn compile_and_run(input: &str, stdin: &str) -> String {
 
     // Extract Program from AstNode
     let program = match ast {
-        bdl_frontend::ast::AstNode::Program(prog) => prog,
+        bbl_frontend::ast::AstNode::Program(prog) => prog,
         _ => {
             return "Expected Program AST node".to_string();
         }
     };
 
     // Generate C++ code
-    bdl_backend::codegen::generate(&program)
+    bbl_backend::codegen::generate(&program)
 }
 
 #[wasm_bindgen]
@@ -45,7 +45,7 @@ pub fn cin_next() -> String {
         let mut buf = buffer.borrow_mut();
         if let Some(pos) = buf.find(char::is_whitespace) {
             input = buf[..pos].to_string();
-            *buf = buf[pos+1..].to_string();
+            *buf = buf[pos + 1..].to_string();
         } else {
             input = buf.clone();
             buf.clear();

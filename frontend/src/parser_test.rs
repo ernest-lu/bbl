@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use crate::parser::{BdlParser, Rule};
+    use crate::parser::{BblParser, Rule};
     use pest::Parser;
 
     fn parse(input: &str, rule: Rule) -> bool {
-        BdlParser::parse(rule, input).is_ok()
+        BblParser::parse(rule, input).is_ok()
     }
 
     #[test]

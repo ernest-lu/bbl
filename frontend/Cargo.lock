@@ -3,7 +3,7 @@
 version = 3
 
 [[package]]
-name = "bdl-frontend"
+name = "bbl-frontend"
 version = "0.1.0"
 dependencies = [
  "crustal",

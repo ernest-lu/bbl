@@ -1,13 +1,13 @@
 let wasmModule = null;
 
-// Compile and run BDL code
-async function compileBDL() {
+// Compile and run bbl code
+async function compileBBL() {
     if (!wasmModule) {
         console.error('WASM not initialized');
         return;
     }
 
-    const bdlCode = document.getElementById('bdl-input').value;
+    const bblCode = document.getElementById('bbl-input').value;
     const stdin = document.getElementById('stdin').value;
 
     try {
@@ -16,7 +16,7 @@ async function compileBDL() {
         document.getElementById('program-output').value = '';
 
         // Call the compile function directly with strings
-        const result = wasmModule.compile_and_run(bdlCode, stdin);
+        const result = wasmModule.compile_and_run(bblCode, stdin);
         
         // Display the result
         document.getElementById('cpp-output').value = result;
@@ -26,15 +26,15 @@ async function compileBDL() {
     }
 }
 
-// Make compileBDL available globally
-window.compileBDL = compileBDL;
+// Make compileBBL available globally
+window.compileBBL = compileBBL;
 
 // Initialize the WASM module
 async function init() {
     console.log("Initializing WASM module...");
     try {
         // Import the wasm-bindgen generated JavaScript
-        const wasm = await import('./web/wasm/bdl_web.js');
+        const wasm = await import('./web/wasm/bbl_web.js');
         // Initialize the module
         await wasm.default();
         wasmModule = wasm;

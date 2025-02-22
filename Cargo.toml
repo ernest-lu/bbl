@@ -1,0 +1,11 @@
+[workspace]
+members = [
+    "frontend",
+    "backend",
+    "cpp_codegen",
+    "web",
+]
+
+[profile.release]
+opt-level = 3
+lto = true

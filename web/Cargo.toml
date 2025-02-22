@@ -1,5 +1,5 @@
 [package]
-name = "bdl-web"
+name = "bbl-web"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,9 +7,9 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-wasm-bindgen = "0.2"
-bdl-frontend = { path = "../frontend" }
-bdl-backend = { path = "../backend" }
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+bbl-frontend = { path = "../frontend" }
+bbl-backend = { path = "../backend" }
 getrandom = { version = "0.2", features = ["js"] }
 
 [profile.release]

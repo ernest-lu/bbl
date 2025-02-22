@@ -1,222 +1,222 @@
-use bdl_frontend::ast::{
-    AssignmentExpr, BinOpExpr, Expr, FloatLiteral, FunctionDef, Identifier, IfExpr, IntegerLiteral,
-    ListExpr, MethodCallExpr, PrintExpr, ReassignmentExpr, RepExpr, ReturnExpr, StringLiteral,
-    Type, UnOpExpr,
+use bbl_frontend::ast::{
+    AssignmentExpr, BinOpExpr, Expr, Identifier, IfExpr, ListExpr, MethodCallExpr, PrintExpr,
+    ReassignmentExpr, RepExpr, Type, UnOpExpr,
 };
 
-use crustal as CG;
-use std::fmt::Write;
-use std::path::Path;
+use cpp_codegen::{Block, Line, Program};
 
-pub fn generate(ast: &bdl_frontend::ast::Program) -> String {
-    // Add standard includes
-    let mut scope = CG::Scope::new();
-    scope.new_include("bits/stdc++.h", true);
-
-    // The language only generates a singular main function.
-    // Everything is pushed into the main function from here
-    let main_fn = scope.new_function("main", CG::Type::new_int32());
-    let body = main_fn.body();
+pub fn generate(ast: &bbl_frontend::ast::Program) -> String {
+    // Create a new program with solve function
+    let mut program = Program::new();
+    let solve_block = &mut program.solve_block;
 
     // Generate code for each expression
     for expr in &ast.expressions {
-        process_expression(body, expr);
+        process_expression(solve_block, expr);
     }
-    main_fn.to_string()
+    program.to_string()
 }
 
-enum ExprResult {
-    integer(i64),
-    float(f64),
-    string(String),
-    list(Vec<ExprResult>),
-    none,
+// Helper function to generate a unique variable name
+fn generate_variable_name() -> String {
+    static mut COUNTER: u32 = 0;
+    unsafe {
+        COUNTER += 1;
+        format!("var_{}", COUNTER)
+    }
 }
 
-// optionally returns a CG::Expression
-fn process_expression(context: &mut CG::Block, expr: &Expr) -> Option<CG::Expr> {
+// Process an expression and add it to the block
+fn process_expression(context: &mut Block, expr: &Expr) {
     match expr {
-        // doesn't do anything
-        // TODO: Support different integers
-        Expr::Integer(i) => Some(CG::Expr::new_num(i.value as u64)),
+        Expr::Integer(i) => {
+            let temp = generate_variable_name();
+            context.add_line(format!("int {} = {};", temp, i.value));
+        }
+        Expr::Float(f) => {
+            let temp = generate_variable_name();
+            context.add_line(format!("double {} = {};", temp, f.value));
+        }
+        Expr::String(s) => {
+            let temp = generate_variable_name();
+            context.add_line(format!("string {} = \"{}\";", temp, s.value));
+        }
         Expr::AssignmentExpr(assign) => {
             generate_assignment(context, assign);
-            None
         }
         Expr::ReassignmentExpr(reassign) => {
             generate_reassignment(context, reassign);
-            None
         }
         Expr::MethodCallExpr(method) => {
             generate_method_call(context, method);
-            None
         }
         Expr::PrintExpr(print) => {
             generate_print(context, print);
-            None
         }
         Expr::IfExpr(if_expr) => {
             generate_if(context, if_expr);
-            None
         }
         Expr::RepExpr(rep) => {
             generate_rep(context, rep);
-            None
         }
-        Expr::Identifier(id) => Some(generate_identifier(context, id)),
-        Expr::ListExpr(list) => Some(generate_list_expr(context, list)),
-        Expr::BinOp(binop) => Some(generate_binop(context, binop)),
-        Expr::UnOp(unop) => Some(generate_unop(context, unop)),
-        Expr::FunctionDef(func) => todo!(),
-        Expr::ReturnExpr(ret) => todo!(),
-        _ => todo!(),
+        Expr::Identifier(id) => {
+            generate_identifier(context, id);
+        }
+        Expr::ListExpr(list) => {
+            generate_list_expr(context, list);
+        }
+        Expr::BinOp(binop) => {
+            generate_binop(context, binop);
+        }
+        Expr::UnOp(unop) => {
+            generate_unop(context, unop);
+        }
+        Expr::FunctionDef(_) | Expr::ReturnExpr(_) => {
+            // Not implemented yet
+            todo!()
+        }
+        Expr::NoneExpr(_) => {
+            // No-op
+            ()
+        }
+        Expr::Boolean(_) => {
+            // No-op
+            ()
+        }
     }
 }
 
-fn get_string_type(t: &Type) -> String {
+fn get_type_string(t: &Type) -> String {
     match t {
-        Type::Int => CG::Type::new_int32().to_string(),
-        Type::String => CG::Type::new_std_string().to_string(),
-        Type::List(t) => CG::Type::new(CG::BaseType::TemplateClass(
-            "std::vector".to_string(),
-            vec![get_string_type(t)],
-        ))
-        .to_string(),
-        _ => todo!(),
+        Type::Int => "int".to_string(),
+        Type::String => "string".to_string(),
+        Type::List(t) => format!("vector<{}>", get_type_string(t)),
+        _ => "auto".to_string(),
     }
 }
 
-fn get_crustal_type(t: &Type) -> CG::Type {
-    match t {
-        Type::Int => CG::Type::new_int32(),
-        Type::String => CG::Type::new_std_string(),
-        Type::List(t) => CG::Type::new(CG::BaseType::TemplateClass(
-            "std::vector".to_string(),
-            vec![get_string_type(t)],
-        )),
-        _ => todo!(),
+fn generate_assignment(context: &mut Block, assign: &AssignmentExpr) {
+    let var_type = get_type_string(&assign.target.associated_type);
+    let var_name = &assign.target.value.value;
+    let temp_var = generate_variable_name();
+    process_expression(context, &assign.value);
+    context.add_line(format!("{} {} = {};", var_type, var_name, temp_var));
+}
+
+fn generate_reassignment(context: &mut Block, assign: &ReassignmentExpr) {
+    let var_name = &assign.target.value;
+    let temp_var = generate_variable_name();
+    process_expression(context, &assign.value);
+    context.add_line(format!("{} = {};", var_name, temp_var));
+}
+
+fn generate_method_call(context: &mut Block, call: &MethodCallExpr) {
+    let mut arg_names = Vec::new();
+    for arg in &call.args {
+        let temp_var = generate_variable_name();
+        process_expression(context, arg);
+        arg_names.push(temp_var);
     }
+    let args_str = arg_names.join(", ");
+    context.add_line(format!(
+        "{}.{}({});",
+        call.method_name.value, call.method_name.value, args_str
+    ));
 }
 
-fn generate_assignment(context: &mut CG::Block, assign: &AssignmentExpr) {
-    let var = context.new_variable(
-        &assign.target.value.value,
-        get_crustal_type(&assign.target.associated_type),
-    );
-    let expr = var.to_expr();
-    let rhs = process_expression(context, &assign.value).unwrap();
-    context.assign(expr, rhs);
+fn generate_print(context: &mut Block, print: &PrintExpr) {
+    let temp_var = generate_variable_name();
+    process_expression(context, &print.arg);
+    context.add_line(format!("cout << {} << endl;", temp_var));
 }
 
-fn generate_reassignment(context: &mut CG::Block, assign: &ReassignmentExpr) {
-    let var_expr = CG::Expr::new_var(&assign.target.value, CG::Type::new_void());
-    let rhs = process_expression(context, &assign.value).unwrap();
-    context.assign(var_expr, rhs);
-}
+fn generate_if(context: &mut Block, if_expr: &IfExpr) {
+    let cond_var = generate_variable_name();
+    process_expression(context, &if_expr.condition);
 
-fn generate_method_call(context: &mut CG::Block, call: &MethodCallExpr) {
-    let obj_name = &call.method_name.value;
-    let args_expr = call
-        .args
-        .iter()
-        .map(|arg| process_expression(context, arg).unwrap())
-        .collect();
-    context.fn_call(obj_name, args_expr);
-}
-
-fn generate_print(context: &mut CG::Block, print: &PrintExpr) {
-    let expr = process_expression(context, &print.arg).unwrap();
-    // TODO: Print string
-}
-
-fn generate_if(context: &mut CG::Block, if_expr: &IfExpr) {
-    let cond = process_expression(context, &if_expr.condition).unwrap();
-    let if_else_expr = context.new_ifelse(&cond);
-
-    let then_block = if_else_expr.then_branch();
-    for expr in if_expr.then_block.iter() {
-        process_expression(then_block, expr).unwrap();
+    let mut then_block = Block::new();
+    for expr in &if_expr.then_block {
+        process_expression(&mut then_block, expr);
     }
-    let else_block = if_else_expr.other_branch();
+
+    context.add_line(format!("if ({}) {{", cond_var));
+    context.add_block(then_block);
+
     if let Some(else_vec) = &if_expr.else_block {
-        for expr in else_vec.iter() {
-            process_expression(else_block, expr).unwrap();
+        let mut else_block = Block::new();
+        for expr in else_vec {
+            process_expression(&mut else_block, expr);
         }
+        context.add_line_s("} else {");
+        context.add_block(else_block);
     }
+    context.add_line_s("}");
 }
 
-fn generate_variable_name() -> String {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
-    let length = rng.gen_range(5..10);
-    let mut name = String::with_capacity(length);
-    name.push(rng.gen_range(b'a'..=b'z') as char);
-    for _ in 1..length {
-        name.push(rng.gen_range(b'a'..=b'z') as char);
+fn generate_rep(context: &mut Block, rep: &RepExpr) {
+    let iter_var = generate_variable_name();
+    let count_var = generate_variable_name();
+    process_expression(context, &rep.num_iterations);
+
+    context.add_line(format!("int {} = 0;", iter_var));
+    context.add_line(format!("int {} = {};", count_var, iter_var));
+
+    let mut loop_block = Block::new();
+    for expr in &rep.body {
+        process_expression(&mut loop_block, expr);
     }
-    name
+
+    context.add_line(format!(
+        "for(int {} = 0; {} < {}; {}++) {{",
+        iter_var, iter_var, count_var, iter_var
+    ));
+    context.add_block(loop_block);
+    context.add_line_s("}");
 }
 
-fn generate_rep(context: &mut CG::Block, rep: &RepExpr) {
-    let cond = process_expression(context, &rep.num_iterations).unwrap();
-    // assume integer for now
-    let var_name = generate_variable_name();
-    let var_expr = context
-        .new_variable(&var_name, CG::Type::new_int32())
-        .to_expr();
+fn generate_binop(context: &mut Block, binop: &BinOpExpr) {
+    let left_var = generate_variable_name();
+    let right_var = generate_variable_name();
+    process_expression(context, &binop.left);
+    process_expression(context, &binop.right);
+    let result_var = generate_variable_name();
+    context.add_line(format!(
+        "auto {} = {} {} {};",
+        result_var,
+        left_var,
+        binop.op.as_str(),
+        right_var
+    ));
+}
 
-    // This is very stupid
-    let var_expr_copy = var_expr.clone();
-    let var_expr_copy_2 = var_expr.clone();
-    let var_expr_copy_3 = var_expr.clone();
+fn generate_unop(context: &mut Block, unop: &UnOpExpr) {
+    let expr_var = generate_variable_name();
+    process_expression(context, &unop.arg);
+    let result_var = generate_variable_name();
+    context.add_line(format!(
+        "auto {} = {}{};",
+        result_var,
+        unop.op.as_str(),
+        expr_var
+    ));
+}
 
-    context.assign(var_expr, CG::Expr::new_num(0));
-    let cond_expr = CG::Expr::binop(var_expr_copy, "<", cond);
-
-    let while_loop = context.new_while_loop(&cond_expr);
-    let while_loop_body = while_loop.body();
-    for expr in rep.body.iter() {
-        process_expression(while_loop_body, expr);
+fn generate_list_expr(context: &mut Block, list: &ListExpr) {
+    let mut element_vars = Vec::new();
+    for elem in &list.elems {
+        let temp_var = generate_variable_name();
+        process_expression(context, elem);
+        element_vars.push(temp_var);
     }
-    while_loop_body.assign(
-        var_expr_copy_2,
-        CG::Expr::binop(var_expr_copy_3, "+", CG::Expr::new_num(1)),
-    );
+    let result_var = generate_variable_name();
+    context.add_line(format!(
+        "vector<auto> {} = {{{}}};",
+        result_var,
+        element_vars.join(", ")
+    ));
 }
 
-fn generate_binop(context: &mut CG::Block, binop: &BinOpExpr) -> CG::Expr {
-    let left = process_expression(context, &binop.left).unwrap();
-    let right = process_expression(context, &binop.right).unwrap();
-    let op = binop.op.as_str();
-    CG::Expr::binop(left, op, right)
-}
-
-fn generate_unop(context: &mut CG::Block, unop: &UnOpExpr) -> CG::Expr {
-    let expr = process_expression(context, &unop.arg).unwrap();
-    let op = unop.op.as_str();
-    CG::Expr::uop(op, expr)
-}
-
-fn generate_list_expr(context: &mut CG::Block, list: &ListExpr) -> CG::Expr {
-    let cg_elems = list
-        .elems
-        .iter()
-        .map(|expr| process_expression(context, expr).unwrap())
-        .collect::<Vec<CG::Expr>>();
-
-    CG::Expr::Raw(format!(
-        "vector{{ {} }}",
-        cg_elems
-            .iter()
-            .map(|e| e.to_string())
-            .collect::<Vec<_>>()
-            .join(", ")
-    ))
-}
-
-fn generate_identifier(context: &mut CG::Block, id: &Identifier) -> CG::Expr {
-    CG::Expr::Variable {
-        name: id.value.clone(),
-        ty: CG::Type::new_int32(),
-    }
+fn generate_identifier(context: &mut Block, id: &Identifier) {
+    let result_var = generate_variable_name();
+    context.add_line(format!("auto {} = {};", result_var, id.value));
 }

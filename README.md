@@ -1,6 +1,6 @@
 We would like to implement BBL: a langauge designed specifically for single-threaded programs. Our goal is simple and concise pythonic / functional syntax with C++ like performance.
 
-We achieve this speed by compiling to C++ and not using interpretation or garbage collection. The single-threaded nature of BDL means that we can avoid the overhead of garbage collection.
+We achieve this speed by compiling to C++ and not using interpretation or garbage collection. The single-threaded nature of BBL means that we can avoid the overhead of garbage collection.
 
 ## Syntax
  - We declare variables using scala like 'val' and 'var'
@@ -27,7 +27,7 @@ We achieve this speed by compiling to C++ and not using interpretation or garbag
 
 We implement our the frontend of our compiler in Rust using lexing and parsing libraries.
 
-We implement our backend in C++, compiling our bdl langauge to C++
+We implement our backend in C++, compiling our bbl langauge to C++
 
 - Implementation phases:
     - Lexer

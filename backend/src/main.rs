@@ -1,7 +1,7 @@
 mod codegen;
 
-use bdl_frontend::ast::{Expr, IntegerLiteral, PrintExpr, Program};
-use bdl_frontend::parser::parse_program;
+use bbl_frontend::ast::{Expr, IntegerLiteral, PrintExpr, Program};
+use bbl_frontend::parser::parse_program;
 use codegen::generate;
 use std::{env, fs};
 

@@ -1,5 +1,5 @@
 [package]
-name = "bdl-backend"
+name = "bbl-backend"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,6 +7,6 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies]
-bdl-frontend = { path = "../frontend" }
-crustal = "0.3"
+bbl-frontend = { path = "../frontend" }
+cpp_codegen = { path = "../cpp_codegen" }
 rand = "0.8"

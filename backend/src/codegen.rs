@@ -26,197 +26,148 @@ fn generate_variable_name() -> String {
     }
 }
 
-// Process an expression and add it to the block
-fn process_expression(context: &mut Block, expr: &Expr) {
+// Process an expression and optionally return a string or add it to the block
+fn process_expression(context: &mut Block, expr: &Expr) -> Option<String> {
     match expr {
-        Expr::Integer(i) => {
-            let temp = generate_variable_name();
-            context.add_line(format!("int {} = {};", temp, i.value));
-        }
-        Expr::Float(f) => {
-            let temp = generate_variable_name();
-            context.add_line(format!("double {} = {};", temp, f.value));
-        }
-        Expr::String(s) => {
-            let temp = generate_variable_name();
-            context.add_line(format!("string {} = \"{}\";", temp, s.value));
-        }
+        Expr::Integer(i) => Some(format!("{}LL", i.value)),
+        Expr::Float(f) => Some(format!("{}L", f.value)),
+        Expr::String(s) => Some(format!("\"{}\"", s.value)),
         Expr::AssignmentExpr(assign) => {
             generate_assignment(context, assign);
+            None
         }
         Expr::ReassignmentExpr(reassign) => {
             generate_reassignment(context, reassign);
+            None
         }
         Expr::MethodCallExpr(method) => {
-            generate_method_call(context, method);
+            todo!()
         }
         Expr::PrintExpr(print) => {
             generate_print(context, print);
+            None
         }
         Expr::IfExpr(if_expr) => {
             generate_if(context, if_expr);
+            None
         }
         Expr::RepExpr(rep) => {
             generate_rep(context, rep);
+            None
         }
-        Expr::Identifier(id) => {
-            generate_identifier(context, id);
-        }
-        Expr::ListExpr(list) => {
-            generate_list_expr(context, list);
-        }
-        Expr::BinOp(binop) => {
-            generate_binop(context, binop);
-        }
-        Expr::UnOp(unop) => {
-            generate_unop(context, unop);
-        }
+        Expr::Identifier(id) => Some(id.value.clone()),
+        Expr::ListExpr(list) => generate_list_expr(context, list),
+        Expr::BinOp(binop) => generate_binop(context, binop),
+        Expr::UnOp(unop) => generate_unop(context, unop),
         Expr::FunctionDef(_) | Expr::ReturnExpr(_) => {
             // Not implemented yet
             todo!()
         }
         Expr::NoneExpr(_) => {
             // No-op
-            ()
+            todo!()
         }
-        Expr::Boolean(_) => {
+        Expr::Boolean(b) => {
             // No-op
-            ()
+            match b.value {
+                true => Some("true".to_string()),
+                false => Some("false".to_string()),
+            }
         }
     }
 }
 
-fn get_type_string(t: &Type) -> String {
-    match t {
+fn get_type_string(inp_type: &Type) -> String {
+    match inp_type {
         Type::Int => "int".to_string(),
+        Type::Float => "float".to_string(),
         Type::String => "string".to_string(),
-        Type::List(t) => format!("vector<{}>", get_type_string(t)),
-        _ => "auto".to_string(),
+        Type::Bool => "bool".to_string(),
+        Type::None => "none".to_string(),
+        Type::List(c) => format!("vector<{}>", get_type_string(c)),
+        Type::Tuple(_) => todo!(),
+        Type::FunctionType(_, _) => "auto".to_string(),
     }
 }
 
-fn generate_assignment(context: &mut Block, assign: &AssignmentExpr) {
+fn generate_assignment(context: &mut Block, assign: &AssignmentExpr) -> Option<String> {
+    let val_result = process_expression(context, &assign.value)?;
     let var_type = get_type_string(&assign.target.associated_type);
     let var_name = &assign.target.value.value;
-    let temp_var = generate_variable_name();
-    process_expression(context, &assign.value);
-    context.add_line(format!("{} {} = {};", var_type, var_name, temp_var));
+    let const_header = if assign.const_var { "const " } else { "" };
+    context.add_line(format!(
+        "{}{} {} = {};",
+        const_header, var_type, var_name, val_result
+    ));
+    None
 }
 
-fn generate_reassignment(context: &mut Block, assign: &ReassignmentExpr) {
+fn generate_reassignment(context: &mut Block, assign: &ReassignmentExpr) -> Option<String> {
+    let val_result = process_expression(context, &assign.value)?;
     let var_name = &assign.target.value;
-    let temp_var = generate_variable_name();
-    process_expression(context, &assign.value);
-    context.add_line(format!("{} = {};", var_name, temp_var));
+    context.add_line(format!("{} = {};", var_name, val_result));
+    None
 }
 
-fn generate_method_call(context: &mut Block, call: &MethodCallExpr) {
-    let mut arg_names = Vec::new();
-    for arg in &call.args {
-        let temp_var = generate_variable_name();
-        process_expression(context, arg);
-        arg_names.push(temp_var);
-    }
-    let args_str = arg_names.join(", ");
-    context.add_line(format!(
-        "{}.{}({});",
-        call.method_name.value, call.method_name.value, args_str
-    ));
+fn generate_print(context: &mut Block, print: &PrintExpr) -> Option<String> {
+    let val_result = process_expression(context, &print.arg)?;
+    context.add_line(format!("cout << {} << '\\n';", val_result));
+    None
 }
 
-fn generate_print(context: &mut Block, print: &PrintExpr) {
-    let temp_var = generate_variable_name();
-    process_expression(context, &print.arg);
-    context.add_line(format!("cout << {} << endl;", temp_var));
-}
+fn generate_if(context: &mut Block, if_expr: &IfExpr) -> Option<String> {
+    let condition = process_expression(context, &if_expr.condition)?;
 
-fn generate_if(context: &mut Block, if_expr: &IfExpr) {
-    let cond_var = generate_variable_name();
-    process_expression(context, &if_expr.condition);
+    let mut new_block = Block::new_with_pre_block("if (".to_string() + &condition + ") ");
 
-    let mut then_block = Block::new();
     for expr in &if_expr.then_block {
-        process_expression(&mut then_block, expr);
+        process_expression(&mut new_block, expr)?;
     }
 
-    context.add_line(format!("if ({}) {{", cond_var));
-    context.add_block(then_block);
-
-    if let Some(else_vec) = &if_expr.else_block {
-        let mut else_block = Block::new();
-        for expr in else_vec {
-            process_expression(&mut else_block, expr);
+    context.add_block(new_block);
+    if let Some(else_block) = &if_expr.else_block {
+        let mut new_block = Block::new_with_pre_block("else ".to_string());
+        for expr in else_block {
+            process_expression(&mut new_block, expr)?;
         }
-        context.add_line_s("} else {");
-        context.add_block(else_block);
+        context.add_block(new_block);
     }
-    context.add_line_s("}");
+    None
 }
 
-fn generate_rep(context: &mut Block, rep: &RepExpr) {
-    let iter_var = generate_variable_name();
-    let count_var = generate_variable_name();
-    process_expression(context, &rep.num_iterations);
-
-    context.add_line(format!("int {} = 0;", iter_var));
-    context.add_line(format!("int {} = {};", count_var, iter_var));
-
-    let mut loop_block = Block::new();
+fn generate_rep(context: &mut Block, rep: &RepExpr) -> Option<String> {
+    let count = process_expression(context, &rep.num_iterations)?;
+    let new_var_name = generate_variable_name();
+    let mut new_block = Block::new_with_pre_block(format!(
+        "for (int {} = 0; {} < {} ; {}++) ",
+        new_var_name, new_var_name, count, new_var_name
+    ));
     for expr in &rep.body {
-        process_expression(&mut loop_block, expr);
+        process_expression(&mut new_block, expr)?;
     }
-
-    context.add_line(format!(
-        "for(int {} = 0; {} < {}; {}++) {{",
-        iter_var, iter_var, count_var, iter_var
-    ));
-    context.add_block(loop_block);
-    context.add_line_s("}");
+    context.add_block(new_block);
+    None
 }
 
-fn generate_binop(context: &mut Block, binop: &BinOpExpr) {
-    let left_var = generate_variable_name();
-    let right_var = generate_variable_name();
-    process_expression(context, &binop.left);
-    process_expression(context, &binop.right);
-    let result_var = generate_variable_name();
-    context.add_line(format!(
-        "auto {} = {} {} {};",
-        result_var,
-        left_var,
-        binop.op.as_str(),
-        right_var
-    ));
+fn generate_list_expr(context: &mut Block, list: &ListExpr) -> Option<String> {
+    let joined_string = "vector {".to_owned()
+        + &list
+            .elems
+            .iter()
+            .map(|e| process_expression(context, e))
+            .collect::<Option<Vec<_>>>()?
+            .join(", ")
+        + "}";
+    Some(joined_string.to_string())
 }
 
-fn generate_unop(context: &mut Block, unop: &UnOpExpr) {
-    let expr_var = generate_variable_name();
-    process_expression(context, &unop.arg);
-    let result_var = generate_variable_name();
-    context.add_line(format!(
-        "auto {} = {}{};",
-        result_var,
-        unop.op.as_str(),
-        expr_var
-    ));
+fn generate_binop(context: &mut Block, binop: &BinOpExpr) -> Option<String> {
+    let left_result = process_expression(context, &binop.left)?;
+    let right_result = process_expression(context, &binop.right)?;
+    Some(format!("{} {} {}", left_result, binop.op, right_result))
 }
 
-fn generate_list_expr(context: &mut Block, list: &ListExpr) {
-    let mut element_vars = Vec::new();
-    for elem in &list.elems {
-        let temp_var = generate_variable_name();
-        process_expression(context, elem);
-        element_vars.push(temp_var);
-    }
-    let result_var = generate_variable_name();
-    context.add_line(format!(
-        "vector<auto> {} = {{{}}};",
-        result_var,
-        element_vars.join(", ")
-    ));
-}
-
-fn generate_identifier(context: &mut Block, id: &Identifier) {
-    let result_var = generate_variable_name();
-    context.add_line(format!("auto {} = {};", result_var, id.value));
+fn generate_unop(context: &mut Block, unop: &UnOpExpr) -> Option<String> {
+    let result = process_expression(context, &unop.arg)?;
+    Some(format!("{}({})", unop.op, result))
 }

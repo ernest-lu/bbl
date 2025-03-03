@@ -1,6 +1,6 @@
 use bbl_frontend::ast::{
-    AssignmentExpr, BinOpExpr, Expr, Identifier, IfExpr, ListExpr, MethodCallExpr, PrintExpr,
-    ReassignmentExpr, RepExpr, Type, UnOpExpr,
+    AssignmentExpr, BinOpExpr, Expr, FunctionDef, Identifier, IfExpr, ListExpr, MethodCallExpr,
+    PrintExpr, ReassignmentExpr, RepExpr, Type, UnOpExpr,
 };
 
 use cpp_codegen::{Block, Line, Program};
@@ -59,8 +59,11 @@ fn process_expression(context: &mut Block, expr: &Expr) -> Option<String> {
         Expr::ListExpr(list) => generate_list_expr(context, list),
         Expr::BinOp(binop) => generate_binop(context, binop),
         Expr::UnOp(unop) => generate_unop(context, unop),
-        Expr::FunctionDef(_) | Expr::ReturnExpr(_) => {
-            // Not implemented yet
+        Expr::FunctionDef(func) => {
+            generate_function_def(context, func);
+            None
+        }
+        Expr::ReturnExpr(ret) => {
             todo!()
         }
         Expr::NoneExpr(_) => {
@@ -88,6 +91,31 @@ fn get_type_string(inp_type: &Type) -> String {
         Type::Tuple(_) => todo!(),
         Type::FunctionType(_, _) => "auto".to_string(),
     }
+}
+
+fn generate_function_def(context: &mut Block, func: &FunctionDef) -> Option<String> {
+    let fn_pre_header = format!(
+        "auto {} = [&]({}) -> {} ",
+        func.name.value,
+        func.args
+            .iter()
+            .map(|arg| format!(
+                "{} {}",
+                get_type_string(&arg.associated_type),
+                arg.value.value
+            ))
+            .collect::<Vec<String>>()
+            .join(", "),
+        "auto"
+    );
+
+    let mut new_block = Block::new_with_pre_block(fn_pre_header, context.indent_level + 1);
+    for expr in &func.body {
+        process_expression(&mut new_block, expr);
+    }
+    context.add_block(new_block);
+
+    None
 }
 
 fn generate_assignment(context: &mut Block, assign: &AssignmentExpr) -> Option<String> {
@@ -118,17 +146,21 @@ fn generate_print(context: &mut Block, print: &PrintExpr) -> Option<String> {
 fn generate_if(context: &mut Block, if_expr: &IfExpr) -> Option<String> {
     let condition = process_expression(context, &if_expr.condition)?;
 
-    let mut new_block = Block::new_with_pre_block("if (".to_string() + &condition + ") ");
+    let mut new_block = Block::new_with_pre_block(
+        "if (".to_string() + &condition + ") ",
+        context.indent_level + 1,
+    );
 
     for expr in &if_expr.then_block {
-        process_expression(&mut new_block, expr)?;
+        process_expression(&mut new_block, expr);
     }
 
     context.add_block(new_block);
     if let Some(else_block) = &if_expr.else_block {
-        let mut new_block = Block::new_with_pre_block("else ".to_string());
+        let mut new_block =
+            Block::new_with_pre_block("else ".to_string(), context.indent_level + 1);
         for expr in else_block {
-            process_expression(&mut new_block, expr)?;
+            process_expression(&mut new_block, expr);
         }
         context.add_block(new_block);
     }
@@ -138,12 +170,15 @@ fn generate_if(context: &mut Block, if_expr: &IfExpr) -> Option<String> {
 fn generate_rep(context: &mut Block, rep: &RepExpr) -> Option<String> {
     let count = process_expression(context, &rep.num_iterations)?;
     let new_var_name = generate_variable_name();
-    let mut new_block = Block::new_with_pre_block(format!(
-        "for (int {} = 0; {} < {} ; {}++) ",
-        new_var_name, new_var_name, count, new_var_name
-    ));
+    let mut new_block = Block::new_with_pre_block(
+        format!(
+            "for (int {} = 0; {} < {}; {}++) ",
+            new_var_name, new_var_name, count, new_var_name
+        ),
+        context.indent_level + 1,
+    );
     for expr in &rep.body {
-        process_expression(&mut new_block, expr)?;
+        process_expression(&mut new_block, expr);
     }
     context.add_block(new_block);
     None

@@ -1,5 +1,5 @@
 def main() {
     rep 5 {
-        print()
+        print("hello")
     }
 }

@@ -129,6 +129,15 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Option<AstNode> {
                 body,
             })))
         }
+        Rule::rep_expr => {
+            let inner_rules = pair.into_inner().collect::<Vec<Pair<Rule>>>();
+            let expr = build_ast_from_expr(inner_rules.get(0)?.clone())?.Expr()?;
+            let body = build_ast_from_expr(inner_rules.get(1)?.clone())?.VecExpr()?;
+            Some(AstNode::Expr(Expr::RepExpr(ast::RepExpr {
+                num_iterations: Box::new(expr),
+                body: body,
+            })))
+        }
         Rule::return_expr => {
             let expr = build_ast_from_expr(pair.into_inner().next()?)?.Expr()?;
             Some(AstNode::Expr(Expr::ReturnExpr(ast::ReturnExpr {

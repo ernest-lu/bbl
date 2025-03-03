@@ -12,7 +12,7 @@ pub struct Program {
 impl Program {
     pub fn new() -> Self {
         Self {
-            solve_block: Block::new_with_pre_block("void solve() ".to_string()),
+            solve_block: Block::new_with_pre_block("void solve() ".to_string(), 0),
         }
     }
 
@@ -39,6 +39,7 @@ int main() {
 pub struct Block {
     pre_block: Option<String>,
     statements: Vec<Line>,
+    pub indent_level: usize,
 }
 
 impl Block {
@@ -46,12 +47,14 @@ impl Block {
         Self {
             statements: Vec::new(),
             pre_block: None,
+            indent_level: 0,
         }
     }
-    pub fn new_with_pre_block(pre_block: String) -> Self {
+    pub fn new_with_pre_block(pre_block: String, indent_level: usize) -> Self {
         Self {
             statements: Vec::new(),
             pre_block: Some(pre_block),
+            indent_level: indent_level,
         }
     }
 
@@ -81,18 +84,19 @@ impl Block {
             .iter()
             .map(|s| {
                 let x = format!(
-                    "    {}",
+                    "{}{}",
+                    " ".repeat(4 * (self.indent_level + 1)),
                     match s {
                         Line::Block(b) => b.to_string(),
                         Line::Statement(s) => s.to_string(),
                     }
                 );
-                println!("{}", x);
+                // println!("{}", x);
                 x
             })
             .collect::<Vec<_>>()
             .join("\n");
-        res += "\n}";
+        res += &format!("\n{}}}", " ".repeat(4 * self.indent_level));
         res
     }
 }

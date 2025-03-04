@@ -7,6 +7,7 @@ expression = _{
     print_expr |
     return_expr |
     assignment |
+    reassignment |
     function_def |
     bin_op |
     if_expr |
@@ -53,7 +54,7 @@ block = { "{" ~ NEWLINE ~ (expression ~ NEWLINE)* ~ "}" }
 // Assignment
 var_val = { "val" | "var" }
 assignment = { var_val ~ typed_identifier ~ "=" ~ expression  }
-reassigment = { identifier ~ "=" ~ expression }
+reassignment = { identifier ~ "=" ~ expression }
 
 // Method call
 method_call = { identifier ~ "(" ~ (expression ~ ("," ~ expression)*)? ~ ")" }

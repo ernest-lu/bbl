@@ -82,7 +82,23 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Option<AstNode> {
                 const_var: (var_val.as_str() == "val"),
             })))
         }
+        Rule::reassignment => {
+            let mut inner_rules = pair.into_inner().collect::<Vec<Pair<Rule>>>();
+            // typed identifier and expression
+            assert!(inner_rules.len() == 2);
 
+            let expr = build_ast_from_expr(inner_rules.pop()?)?.Expr()?;
+            let identifier = build_ast_from_expr(inner_rules.pop()?)?
+                .Expr()?
+                .Identifier()?;
+
+            Some(AstNode::Expr(Expr::ReassignmentExpr(
+                ast::ReassignmentExpr {
+                    target: identifier,
+                    value: Box::new(expr),
+                },
+            )))
+        }
         Rule::print_expr => {
             let expr = build_ast_from_expr(pair.into_inner().next()?)?.Expr();
             let print_expr = PrintExpr::new(expr?);

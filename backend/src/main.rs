@@ -9,6 +9,9 @@ fn main() {
     // Create a simple test program that prints a number
     let file = env::args().nth(1).expect("No file provided");
     let src = fs::read_to_string(file).expect("Failed to read file");
+
+    let src = if src.ends_with('\n') { src } else { src + "\n" };
+
     let prog = parse_program(&src)
         .expect("Failed to parse program")
         .Program()

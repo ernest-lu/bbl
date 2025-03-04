@@ -36,6 +36,7 @@ mod tests {
         assert!(parse("x: int = 42", Rule::assignment));
         assert!(parse("y: float = 3.14", Rule::assignment));
         assert!(parse("nums: list<int> = method()", Rule::assignment));
+        assert!(parse("x = 3 + 4", Rule::reassignment));
     }
 
     #[test]

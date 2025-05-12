@@ -198,7 +198,14 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Option<AstNode> {
 }
 
 pub fn parse_program(input: &str) -> Result<Box<AstNode>, String> {
-    match BblParser::parse(Rule::program, input) {
+    // Add a newline if the input doesn't end with one
+    let input_with_newline = if !input.ends_with('\n') {
+        format!("{}\n", input)
+    } else {
+        input.to_string()
+    };
+
+    match BblParser::parse(Rule::program, &input_with_newline) {
         Ok(parsed) => {
             for pair in parsed {
                 let node = match build_ast_from_expr(pair) {

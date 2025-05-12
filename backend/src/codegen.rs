@@ -30,7 +30,7 @@ fn generate_variable_name() -> String {
 fn process_expression(context: &mut Block, expr: &Expr) -> Option<String> {
     match expr {
         Expr::Integer(i) => Some(format!("{}LL", i.value)),
-        Expr::Float(f) => Some(format!("{}L", f.value)),
+        Expr::Float(f) => Some(format!("{}LL", f.value)),
         Expr::String(s) => Some(format!("\"{}\"", s.value)),
         Expr::AssignmentExpr(assign) => {
             generate_assignment(context, assign);

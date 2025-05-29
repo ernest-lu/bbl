@@ -12,7 +12,7 @@ pub struct FunctionDef {
     pub body: Vec<Expr>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Int,
     Float,

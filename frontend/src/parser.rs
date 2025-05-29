@@ -16,7 +16,6 @@ use crate::ast::IntegerLiteral;
 use crate::ast::ListExpr;
 use crate::ast::PrintExpr;
 use crate::ast::Program;
-use crate::ast::StringLiteral;
 use crate::ast::TypedIdentifier;
 use pest::iterators::Pair;
 

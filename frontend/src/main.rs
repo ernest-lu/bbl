@@ -2,6 +2,7 @@ pub mod ast;
 pub mod parser;
 #[cfg(test)]
 mod parser_test;
+pub mod typeck;
 
 use std::env;
 use std::fs;
@@ -16,5 +17,9 @@ fn main() {
 
     let prog = parser::parse_program(&src).expect("Failed to parse program");
 
-    println!("{:?}", prog);
+    let mut checker = typeck::TypeChecker::new();
+    match checker.check_program(&prog.Program().unwrap()) {
+        Ok(_) => println!("Type check passed!"),
+        Err(e) => println!("Type error: {}", e.message),
+    }
 }

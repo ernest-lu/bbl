@@ -1,0 +1,15 @@
+{
+  "name": "bbl-web",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "bbl_web_bg.wasm",
+    "bbl_web.js",
+    "bbl_web.d.ts"
+  ],
+  "main": "bbl_web.js",
+  "types": "bbl_web.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
